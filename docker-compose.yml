@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: ./backend/gateway
+    ports:
+      - "5001:8000"
+    depends_on:
+      - market-service
+      - news-service
+      - portfolio-service
+      - ai-service
+    networks:
+      - moneymitra-net
+
+  market-service:
+    build: ./backend/market-service
+    networks:
+      - moneymitra-net
+
+  news-service:
+    build: ./backend/news-service
+    env_file:
+      - ./backend/.env
+    networks:
+      - moneymitra-net
+
+  portfolio-service:
+    build: ./backend/portfolio-service
+    networks:
+      - moneymitra-net
+
+  ai-service:
+    build: ./backend/ai-service
+    env_file:
+      - ./backend/.env
+    networks:
+      - moneymitra-net
+
+  frontend:
+    build: .
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5001
+    depends_on:
+      - gateway
+    networks:
+      - moneymitra-net
+
+networks:
+  moneymitra-net:
+    driver: bridge
