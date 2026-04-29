@@ -42,9 +42,10 @@ dist-ssr
 *.swp
 *.swo
 *~
-
-# Environment variables
+backend/.env
 .env
+# Environment variables
+
 .env.local
 .env.development.local
 .env.test.local

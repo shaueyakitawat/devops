@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { TrendingUp, TrendingDown, RefreshCw, Activity, Search, Sparkles, BarChart2 } from 'lucide-react';
 import Card from '../components/Card';
+import API_BASE from '../lib/api';
 
 const Market = () => {
   const { t } = useTranslation();
@@ -45,7 +46,7 @@ const Market = () => {
   const loadMarketData = async () => {
     try {
       setRefreshing(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/market/market_overview`);
+      const response = await fetch(`${API_BASE}/api/market/market_overview`);
       if (!response.ok) throw new Error("Market overview failed");
       const data = await response.json();
       if (data?.success) {
@@ -61,7 +62,7 @@ const Market = () => {
   const loadChartData = async (symbol, period) => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/market/market_historical/${encodeURIComponent(symbol)}?period=${period}`);
+      const response = await fetch(`${API_BASE}/api/market/market_historical/${encodeURIComponent(symbol)}?period=${period}`);
       if (!response.ok) throw new Error("Chart data failed");
       const data = await response.json();
       if (data?.success) {
@@ -86,7 +87,7 @@ const Market = () => {
 
     try {
       // Load stock info
-      const infoResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/market/stock_info/${ticker}`);
+      const infoResponse = await fetch(`${API_BASE}/api/market/stock_info/${ticker}`);
       if (!infoResponse.ok) throw new Error("Stock info failed");
       const infoData = await infoResponse.json();
       if (infoData?.success) {
@@ -94,7 +95,7 @@ const Market = () => {
       }
 
       // Load chart data
-      const chartResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/market/market_historical/${ticker}?period=${stockChartPeriod}`);
+      const chartResponse = await fetch(`${API_BASE}/api/market/market_historical/${ticker}?period=${stockChartPeriod}`);
       if (!chartResponse.ok) throw new Error("Stock chart failed");
       const chartData = await chartResponse.json();
       if (chartData?.success) {
@@ -112,7 +113,7 @@ const Market = () => {
     
     try {
       setLoadingStock(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/market/market_historical/${selectedStock}?period=${period}`);
+      const response = await fetch(`${API_BASE}/api/market/market_historical/${selectedStock}?period=${period}`);
       if (!response.ok) throw new Error("Chart reload failed");
       const data = await response.json();
       if (data?.success) {
@@ -130,7 +131,7 @@ const Market = () => {
 
     setLoadingAI(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/get_response`, {
+      const response = await fetch(`${API_BASE}/api/ai/get_response`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

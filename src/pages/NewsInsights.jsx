@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Globe, CheckCircle, ExternalLink, Sparkles, BookOpen } from 'lucide-react';
 import Card from '../components/Card';
+import API_BASE from '../lib/api';
 
 const NewsInsights = () => {
   const [content, setContent] = useState([]);
@@ -58,7 +59,7 @@ const NewsInsights = () => {
       let hasMore = true;
       
       while (hasMore) {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/news/sebi_content_stream`, {
+        const response = await fetch(`${API_BASE}/api/news/sebi_content_stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -112,7 +113,7 @@ const NewsInsights = () => {
       let articleIndex = 0;
       let hasMore = true;
       while (hasMore) {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/news/sebi_content_stream`, {
+        const response = await fetch(`${API_BASE}/api/news/sebi_content_stream`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -151,7 +152,7 @@ const NewsInsights = () => {
   const fetchSebiAIAnalysis = async (articleId, articleTitle, articleContent) => {
     setSebiLoadingAI(prev => ({ ...prev, [articleId]: true }));
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/get_ai_analysis`, {
+      const response = await fetch(`${API_BASE}/api/ai/get_ai_analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,7 +180,7 @@ const NewsInsights = () => {
     setLoadingAI(prev => ({ ...prev, [articleId]: true }));
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/get_ai_analysis`, {
+      const response = await fetch(`${API_BASE}/api/ai/get_ai_analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -209,7 +210,7 @@ const NewsInsights = () => {
     setLoadingGeneralAI(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/ai/analyze-news`,
+        `${API_BASE}/api/ai/analyze-news`,
         {
           method: "POST",
           headers: {

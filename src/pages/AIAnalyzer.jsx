@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import "./AIAnalyzer.css";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+import API_BASE from "../lib/api";
 
 export default function AIAnalyzer() {
   const [file, setFile] = useState(null);
@@ -38,7 +37,7 @@ export default function AIAnalyzer() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${API_URL}/api/ai/analyze-portfolio`, {
+      const response = await fetch(`${API_BASE}/api/ai/analyze-portfolio`, {
         method: "POST",
         body: formData,
       });
