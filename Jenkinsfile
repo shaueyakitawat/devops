@@ -4,13 +4,10 @@ pipeline {
             yaml """
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    component: ci
 spec:
   containers:
   - name: kubectl
-    image: bitnami/kubectl:latest
+    image: alpine/k8s:1.29.2
     command:
     - cat
     tty: true
@@ -37,7 +34,7 @@ spec:
                             'frontend', 'gateway', 'market-service', 'news-service', 'portfolio-service', 'ai-service'
                         ]
                         
-                        // Rollout restart to ensure pods use the images we built
+                        // Rollout restart
                         deployments.each { name ->
                             sh "kubectl rollout restart deployment ${name} -n ${namespace}"
                         }
