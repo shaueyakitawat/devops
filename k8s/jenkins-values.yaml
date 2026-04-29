@@ -10,4 +10,6 @@ controller:
     - git:5.7.0
     - sonar:2.18
 persistence:
-  enabled: false
+  enabled: true
+  size: 8Gi
+  storageClass: standard

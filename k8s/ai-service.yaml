@@ -5,6 +5,11 @@ metadata:
   namespace: moneymitra
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: ai-service
@@ -15,8 +20,8 @@ spec:
     spec:
       containers:
         - name: ai-service
-          image: moneymitra-ai-service:latest
-          imagePullPolicy: IfNotPresent
+          image: <dockerhub-username>/moneymitra-ai-service:latest
+          imagePullPolicy: Always
           envFrom:
             - secretRef:
                 name: moneymitra-secrets

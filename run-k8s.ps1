@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
-$minikube = 'C:\Program Files\Kubernetes\Minikube\minikube.exe'
-if (-not (Test-Path $minikube)) {
-  throw "Minikube not found at $minikube"
+$minikube = if (Get-Command minikube -ErrorAction SilentlyContinue) { 'minikube' } else { 'C:\Program Files\Kubernetes\Minikube\minikube.exe' }
+if (-not (Get-Command $minikube -ErrorAction SilentlyContinue)) {
+  throw "Minikube not found. Please install minikube and ensure it is in your PATH."
 }
 
 # Start Minikube if needed
@@ -40,6 +40,19 @@ Write-Host "Applying Kubernetes manifests..."
 & $minikube kubectl -- apply -f k8s/frontend.yaml
 
 Write-Host "All resources applied."
+
+Write-Host "Installing/Updating Jenkins via Helm..."
+helm repo add jenkins https://charts.jenkins.io
+helm repo update
+helm upgrade --install jenkins jenkins/jenkins -f k8s/jenkins-values.yaml --namespace default
+
+Write-Host "Installing/Updating SonarQube via Helm..."
+helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
+helm repo update
+helm upgrade --install sonarqube sonarqube/sonarqube -f k8s/sonarqube-values.yaml --namespace default
+
 Write-Host "Keep a separate terminal open for these commands:"
 Write-Host "  $minikube kubectl -- port-forward svc/gateway 30001:8000 -n moneymitra"
 Write-Host "  $minikube service frontend -n moneymitra"
+Write-Host "  $minikube service jenkins -n default"
+Write-Host "  $minikube service sonarqube-sonarqube -n default"
