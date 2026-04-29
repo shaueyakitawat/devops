@@ -26,16 +26,20 @@ spec:
             steps {
                 container('kubectl') {
                     script {
-                        // Apply all manifests in k8s directory
-                        sh "kubectl apply -f k8s/"
-                        
                         def namespace = "moneymitra"
-                        def deployments = [
+                        def services = [
                             'frontend', 'gateway', 'market-service', 'news-service', 'portfolio-service', 'ai-service'
                         ]
+
+                        // Apply base configs first
+                        sh "kubectl apply -f k8s/namespace.yaml || true"
+                        sh "kubectl apply -f k8s/secret.yaml"
+                        sh "kubectl apply -f k8s/configmap.yaml"
                         
-                        // Rollout restart
-                        deployments.each { name ->
+                        // Apply and Restart each microservice explicitly
+                        services.each { name ->
+                            echo "Deploying ${name}..."
+                            sh "kubectl apply -f k8s/${name}.yaml"
                             sh "kubectl rollout restart deployment ${name} -n ${namespace}"
                         }
                     }
