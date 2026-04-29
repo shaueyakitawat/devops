@@ -8,8 +8,11 @@ spec:
   containers:
   - name: kubectl
     image: alpine/k8s:1.29.2
-    command:
-    - cat
+    command: [cat]
+    tty: true
+  - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli:latest
+    command: [cat]
     tty: true
 """
         }
@@ -22,6 +25,16 @@ spec:
             }
         }
 
+        stage('SonarQube Analysis') {
+            steps {
+                container('sonar-scanner') {
+                    withSonarQubeEnv('SonarQube') {
+                        sh "sonar-scanner -Dsonar.projectKey=MoneyMitra -Dsonar.sources=. -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
                 container('kubectl') {
@@ -31,12 +44,10 @@ spec:
                             'frontend', 'gateway', 'market-service', 'news-service', 'portfolio-service', 'ai-service'
                         ]
 
-                        // Apply base configs first
                         sh "kubectl apply -f k8s/namespace.yaml || true"
                         sh "kubectl apply -f k8s/secret.yaml"
                         sh "kubectl apply -f k8s/configmap.yaml"
                         
-                        // Apply and Restart each microservice explicitly
                         services.each { name ->
                             echo "Deploying ${name}..."
                             sh "kubectl apply -f k8s/${name}.yaml"
@@ -50,10 +61,10 @@ spec:
 
     post {
         success {
-            echo 'SUCCESS: All microservices deployed and restarted!'
+            echo 'SUCCESS: Code analyzed and services deployed!'
         }
         failure {
-            echo 'FAILURE: Deployment failed. Check the logs above.'
+            echo 'FAILURE: Check the logs above.'
         }
     }
 }
