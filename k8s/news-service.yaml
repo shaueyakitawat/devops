@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: news-service
-          image: <dockerhub-username>/moneymitra-news-service:latest
-          imagePullPolicy: Always
+          image: shaueyakitawat/moneymitra-news-service:latest
+          imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
                 name: moneymitra-secrets

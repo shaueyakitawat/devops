@@ -5,7 +5,7 @@ pipeline {
         DOCKER_BUILDKIT = "1"
         DOCKER_HUB_CREDENTIALS = 'docker-hub-credentials'
         // FIXME: Replace with your actual Docker Hub username
-        DOCKER_REGISTRY = 'your-dockerhub-username' 
+        DOCKER_REGISTRY = 'shaueyakitawat' 
     }
 
     stages {

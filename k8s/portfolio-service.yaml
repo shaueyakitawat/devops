@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: portfolio-service
-          image: <dockerhub-username>/moneymitra-portfolio-service:latest
-          imagePullPolicy: Always
+          image: shaueyakitawat/moneymitra-portfolio-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
 ---

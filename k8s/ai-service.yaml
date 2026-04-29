@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: ai-service
-          image: <dockerhub-username>/moneymitra-ai-service:latest
-          imagePullPolicy: Always
+          image: shaueyakitawat/moneymitra-ai-service:latest
+          imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
                 name: moneymitra-secrets

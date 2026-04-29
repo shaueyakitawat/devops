@@ -9,20 +9,20 @@ if ! minikube status >/dev/null 2>&1; then
 fi
 
 echo "Building images..."
-docker build -t moneymitra-frontend:latest .
-docker build -t moneymitra-gateway:latest ./backend/gateway
-docker build -t moneymitra-market-service:latest ./backend/market-service
-docker build -t moneymitra-news-service:latest ./backend/news-service
-docker build -t moneymitra-portfolio-service:latest ./backend/portfolio-service
-docker build -t moneymitra-ai-service:latest ./backend/ai-service
+docker build -t shaueyakitawat/moneymitra-frontend:latest .
+docker build -t shaueyakitawat/moneymitra-gateway:latest ./backend/gateway
+docker build -t shaueyakitawat/moneymitra-market-service:latest ./backend/market-service
+docker build -t shaueyakitawat/moneymitra-news-service:latest ./backend/news-service
+docker build -t shaueyakitawat/moneymitra-portfolio-service:latest ./backend/portfolio-service
+docker build -t shaueyakitawat/moneymitra-ai-service:latest ./backend/ai-service
 
 echo "Loading images into Minikube..."
-minikube image load moneymitra-frontend:latest
-minikube image load moneymitra-gateway:latest
-minikube image load moneymitra-market-service:latest
-minikube image load moneymitra-news-service:latest
-minikube image load moneymitra-portfolio-service:latest
-minikube image load moneymitra-ai-service:latest
+minikube image load shaueyakitawat/moneymitra-frontend:latest
+minikube image load shaueyakitawat/moneymitra-gateway:latest
+minikube image load shaueyakitawat/moneymitra-market-service:latest
+minikube image load shaueyakitawat/moneymitra-news-service:latest
+minikube image load shaueyakitawat/moneymitra-portfolio-service:latest
+minikube image load shaueyakitawat/moneymitra-ai-service:latest
 
 echo "Applying Kubernetes manifests..."
 kubectl apply -f k8s/namespace.yaml

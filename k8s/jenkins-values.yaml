@@ -5,10 +5,10 @@ controller:
     username: admin
     password: admin123
   installPlugins:
-    - kubernetes:4287.v2ed2d8a_33d6a
-    - workflow-aggregator:600.vb_57cdd26fdd7
-    - git:5.7.0
-    - sonar:2.18
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - sonar
 persistence:
   enabled: true
   size: 8Gi

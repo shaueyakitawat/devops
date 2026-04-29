@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: <dockerhub-username>/moneymitra-frontend:latest
-          imagePullPolicy: Always
+          image: shaueyakitawat/moneymitra-frontend:latest
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: moneymitra-config
