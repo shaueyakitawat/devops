@@ -1,9 +1,21 @@
 pipeline {
-    agent any
-
-    environment {
-        // No Docker needed in Jenkins anymore
-        IMAGE_PREFIX = 'shaueyakitawat' 
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    component: ci
+spec:
+  containers:
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+    - cat
+    tty: true
+"""
+        }
     }
 
     stages {
@@ -13,28 +25,22 @@ pipeline {
             }
         }
 
-        // We skip the Build stage because images are already in Minikube's local registry
-        // This makes the pipeline lightning fast and reliable for the Hackathon
-
-        stage('Deploy to Local Kubernetes') {
+        stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    // Apply config maps, secrets, and deployments
-                    sh "kubectl apply -f k8s/"
-                    
-                    def namespace = "moneymitra"
-                    def deployments = [
-                        'frontend', 'gateway', 'market-service', 'news-service', 'portfolio-service', 'ai-service'
-                    ]
-                    
-                    // Force rollout to pick up latest images
-                    deployments.each { name ->
-                        sh "kubectl rollout restart deployment ${name} -n ${namespace}"
-                    }
-                    
-                    // Verify rollout status
-                    deployments.each { name ->
-                        sh "kubectl rollout status deployment ${name} -n ${namespace} --timeout=120s"
+                container('kubectl') {
+                    script {
+                        // Apply all manifests in k8s directory
+                        sh "kubectl apply -f k8s/"
+                        
+                        def namespace = "moneymitra"
+                        def deployments = [
+                            'frontend', 'gateway', 'market-service', 'news-service', 'portfolio-service', 'ai-service'
+                        ]
+                        
+                        // Rollout restart to ensure pods use the images we built
+                        deployments.each { name ->
+                            sh "kubectl rollout restart deployment ${name} -n ${namespace}"
+                        }
                     }
                 }
             }
@@ -43,10 +49,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment successful! All microservices are updated in the cluster.'
+            echo 'SUCCESS: All microservices deployed and restarted!'
         }
         failure {
-            echo 'Deployment failed. Check the logs above.'
+            echo 'FAILURE: Deployment failed. Check the logs above.'
         }
     }
 }
