@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_BUILDKIT = "1"
-        // Using your local tag prefix
+        // No Docker needed in Jenkins anymore
         IMAGE_PREFIX = 'shaueyakitawat' 
     }
 
@@ -14,25 +13,8 @@ pipeline {
             }
         }
 
-        stage('Build Local Images') {
-            steps {
-                script {
-                    def services = [
-                        'frontend': '.',
-                        'gateway': './backend/gateway',
-                        'market-service': './backend/market-service',
-                        'news-service': './backend/news-service',
-                        'portfolio-service': './backend/portfolio-service',
-                        'ai-service': './backend/ai-service'
-                    ]
-
-                    services.each { name, path ->
-                        echo "Building ${name}..."
-                        sh "docker build -t ${env.IMAGE_PREFIX}/moneymitra-${name}:latest ${path}"
-                    }
-                }
-            }
-        }
+        // We skip the Build stage because images are already in Minikube's local registry
+        // This makes the pipeline lightning fast and reliable for the Hackathon
 
         stage('Deploy to Local Kubernetes') {
             steps {
@@ -61,10 +43,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment successful! All microservices are updated.'
+            echo 'Deployment successful! All microservices are updated in the cluster.'
         }
         failure {
-            echo 'Build or Deployment failed. Check the logs above.'
+            echo 'Deployment failed. Check the logs above.'
         }
     }
 }
