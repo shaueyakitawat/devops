@@ -3,9 +3,8 @@ pipeline {
 
     environment {
         DOCKER_BUILDKIT = "1"
-        DOCKER_HUB_CREDENTIALS = 'docker-hub-credentials'
-        // FIXME: Replace with your actual Docker Hub username
-        DOCKER_REGISTRY = 'shaueyakitawat' 
+        // Using your local tag prefix
+        IMAGE_PREFIX = 'shaueyakitawat' 
     }
 
     stages {
@@ -15,43 +14,27 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('Build Local Images') {
             steps {
                 script {
-                    def scannerHome = tool 'SonarQubeScanner'
-                    withSonarQubeEnv('SonarQube') {
-                        // Assuming SonarQube is accessible at this internal cluster URL from Jenkins
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=moneymitra -Dsonar.sources=."
+                    def services = [
+                        'frontend': '.',
+                        'gateway': './backend/gateway',
+                        'market-service': './backend/market-service',
+                        'news-service': './backend/news-service',
+                        'portfolio-service': './backend/portfolio-service',
+                        'ai-service': './backend/ai-service'
+                    ]
+
+                    services.each { name, path ->
+                        echo "Building ${name}..."
+                        sh "docker build -t ${env.IMAGE_PREFIX}/moneymitra-${name}:latest ${path}"
                     }
                 }
             }
         }
 
-        stage('Build & Push Images') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: env.DOCKER_HUB_CREDENTIALS, passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
-                        
-                        def services = [
-                            'frontend': '.',
-                            'gateway': './backend/gateway',
-                            'market-service': './backend/market-service',
-                            'news-service': './backend/news-service',
-                            'portfolio-service': './backend/portfolio-service',
-                            'ai-service': './backend/ai-service'
-                        ]
-
-                        services.each { name, path ->
-                            sh "docker build -t ${env.DOCKER_REGISTRY}/moneymitra-${name}:latest ${path}"
-                            sh "docker push ${env.DOCKER_REGISTRY}/moneymitra-${name}:latest"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to Local Kubernetes') {
             steps {
                 script {
                     // Apply config maps, secrets, and deployments
@@ -67,7 +50,7 @@ pipeline {
                         sh "kubectl rollout restart deployment ${name} -n ${namespace}"
                     }
                     
-                    // Verify rollout status (fails the pipeline if a rollout fails)
+                    // Verify rollout status
                     deployments.each { name ->
                         sh "kubectl rollout status deployment ${name} -n ${namespace} --timeout=120s"
                     }
@@ -78,12 +61,10 @@ pipeline {
 
     post {
         success {
-            echo 'Build successful!'
-            githubNotify context: 'Jenkins Pipeline', description: 'Build completed successfully', status: 'SUCCESS', targetUrl: env.BUILD_URL
+            echo 'Deployment successful! All microservices are updated.'
         }
         failure {
-            echo 'Build failed!'
-            githubNotify context: 'Jenkins Pipeline', description: 'Build failed', status: 'FAILURE', targetUrl: env.BUILD_URL
+            echo 'Build or Deployment failed. Check the logs above.'
         }
     }
 }
