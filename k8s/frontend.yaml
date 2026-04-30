@@ -26,7 +26,14 @@ spec:
             - configMapRef:
                 name: moneymitra-config
           ports:
-            - containerPort: 5173
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -39,5 +46,5 @@ spec:
     app: frontend
   ports:
     - port: 5173
-      targetPort: 5173
+      targetPort: 80
       nodePort: 30000

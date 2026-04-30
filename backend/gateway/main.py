@@ -28,8 +28,18 @@ ENDPOINT_MAP = {
     "upload_portfolio": "portfolio",
     "analyze_portfolio_risk": "portfolio",
     "analyze_portfolio_ai": "ai",
-    "get_response": "ai"
+    "get_response": "ai",
+    "docs": "market",
+    "openapi.json": "market"
 }
+
+@app.route("/", methods=["GET"])
+def index():
+    return {
+        "status": "online",
+        "message": "MoneyMitra Gateway is running",
+        "endpoints": list(ENDPOINT_MAP.keys())
+    }
 
 @app.route("/api/<service>/<path:path>", methods=["GET", "POST", "OPTIONS"])
 def proxy_route(service, path):

@@ -6,6 +6,13 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
+  - name: docker
+    image: docker:24.0.6
+    command: [cat]
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
   - name: kubectl
     image: alpine/k8s:1.29.2
     command: [cat]
@@ -14,8 +21,18 @@ spec:
     image: sonarsource/sonar-scanner-cli:latest
     command: [cat]
     tty: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
 """
         }
+    }
+
+    environment {
+        DOCKER_REGISTRY = 'shaueyakitawat'
+        DOCKER_CREDS = 'docker-hub-credentials'
+        SONAR_HOST_URL = 'http://sonarqube-sonarqube.default.svc.cluster.local:9000'
     }
 
     stages {
@@ -28,8 +45,38 @@ spec:
         stage('SonarQube Analysis') {
             steps {
                 container('sonar-scanner') {
-                    withSonarQubeEnv('SonarQube') {
-                        sh "sonar-scanner -Dsonar.projectKey=MoneyMitra -Dsonar.sources=. -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"
+                    script {
+                        // Using credentials for Sonar token
+                        withCredentials([string(credentialsId: 'sonar-auth-token', variable: 'SONAR_AUTH_TOKEN')]) {
+                            sh "sonar-scanner -Dsonar.host.url=${SONAR_HOST_URL} -Dsonar.login=${SONAR_AUTH_TOKEN}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build & Push Images') {
+            steps {
+                container('docker') {
+                    withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh "docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}"
+                        
+                        script {
+                            def services = [
+                                'frontend': '.',
+                                'gateway': 'backend/gateway',
+                                'market-service': 'backend/market-service',
+                                'news-service': 'backend/news-service',
+                                'portfolio-service': 'backend/portfolio-service',
+                                'ai-service': 'backend/ai-service'
+                            ]
+                            
+                            services.each { name, path ->
+                                echo "Building and pushing ${name}..."
+                                sh "docker build -t ${DOCKER_REGISTRY}/moneymitra-${name}:latest ${path}"
+                                sh "docker push ${DOCKER_REGISTRY}/moneymitra-${name}:latest"
+                            }
+                        }
                     }
                 }
             }
@@ -52,6 +99,7 @@ spec:
                             echo "Deploying ${name}..."
                             sh "kubectl apply -f k8s/${name}.yaml"
                             sh "kubectl rollout restart deployment ${name} -n ${namespace}"
+                            sh "kubectl rollout status deployment ${name} -n ${namespace} --timeout=90s"
                         }
                     }
                 }
@@ -61,10 +109,10 @@ spec:
 
     post {
         success {
-            echo 'SUCCESS: Code analyzed and services deployed!'
+            echo 'SUCCESS: Code analyzed, images pushed, and services deployed!'
         }
         failure {
-            echo 'FAILURE: Check the logs above.'
+            echo 'FAILURE: Pipeline failed. Check the logs above.'
         }
     }
 }
