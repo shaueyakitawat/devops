@@ -68,3 +68,9 @@ instance/
 
 # OS specific
 Thumbs.db
+
+# Custom
+.pids/
+.terraform/
+*.tfstate
+*.tfstate.backup

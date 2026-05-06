@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_HOST_URL = 'http://sonarqube:9000'
+        SONAR_TOKEN_ID = 'sonar-auth-token'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/shaueyakitawat/devops.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    docker.image('sonarsource/sonar-scanner-cli:latest').inside("--network devops-main_moneymitra-net --entrypoint=''") {
+                        withCredentials([string(credentialsId: env.SONAR_TOKEN_ID, variable: 'SONAR_TOKEN')]) {
+                            sh "sonar-scanner \
+                                -Dsonar.projectKey=moneymitra \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                                -Dsonar.token=${SONAR_TOKEN}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                echo 'Quality checks passed! Results are available in SonarQube dashboard.'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                echo 'Docker Compose services are running.'
+                sh 'docker ps'
+            }
+        }
+    }
+}

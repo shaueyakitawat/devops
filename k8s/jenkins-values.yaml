@@ -4,6 +4,27 @@ controller:
   admin:
     username: admin
     password: admin123
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  javaOpts: "-Xms384m -Xmx768m"
+  livenessProbe:
+    initialDelaySeconds: 120
+
+    periodSeconds: 20
+    failureThreshold: 10
+  readinessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    failureThreshold: 10
+  startupProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    failureThreshold: 30
   installPlugins:
     - kubernetes
     - workflow-aggregator
@@ -22,7 +43,7 @@ controller:
                       id: "sonar-admin-creds"
                       scope: GLOBAL
                       username: "admin"
-                      password: "admin123"
+                      password: "Shaurya@1234"
                       description: "SonarQube admin credentials for bootstrap pipeline"
 persistence:
   enabled: true

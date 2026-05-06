@@ -7,20 +7,31 @@ persistence:
 resources:
   requests:
     memory: "1.5Gi"
-    cpu: "500m"
+    cpu: "300m"
   limits:
-    memory: "2Gi"
-    cpu: "1000m"
+    memory: "1.5Gi"
+    cpu: "500m"
 
 # JVM heap tuning (This is the most important part for stability)
-jvmOpts: "-Xms512m -Xmx1024m -XX:+UseParallelGC"
+jvmOpts: "-Xms512m -Xmx768m -XX:+UseParallelGC"
 
 # Disabling heavy background initializations
 initSysctl:
-  enabled: false
+  enabled: true
 
 # Correct setting for SonarQube Community Build
 community:
   enabled: true
 
 monitoringPasscode: "moneymitra123"
+
+# Extra environment variables
+extraEnv:
+  - name: SONAR_SEARCH_JAVAOPTS
+    value: "-Xms512m -Xmx512m -XX:+UseParallelGC"
+
+# Increase startup probe time
+startupProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  failureThreshold: 60

@@ -4,7 +4,7 @@ set -e
 JENKINS_ADMIN_USER="${JENKINS_ADMIN_USER:-admin}"
 JENKINS_ADMIN_PASS="${JENKINS_ADMIN_PASS:-admin123}"
 SONAR_ADMIN_USER="${SONAR_ADMIN_USER:-admin}"
-SONAR_ADMIN_PASS="${SONAR_ADMIN_PASS:-admin123}"
+SONAR_ADMIN_PASS="${SONAR_ADMIN_PASS:-Shaurya@1234}"
 JENKINS_LOCAL_PORT="${JENKINS_LOCAL_PORT:-18080}"
 SONAR_LOCAL_PORT="${SONAR_LOCAL_PORT:-19000}"
 JENKINS_JOB_NAME="${JENKINS_JOB_NAME:-MoneyMitra-Pipeline}"
@@ -59,7 +59,8 @@ configure_jenkins_pipeline_job() {
     fi
 
     auth="$JENKINS_ADMIN_USER:$JENKINS_ADMIN_PASS"
-    crumb=$(curl -fsS -u "$auth" "$jenkins_url/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
+    crumb=$(curl -fsS -u "$auth" -c /tmp/jenkins-cookies.txt "http://127.0.0.1:$JENKINS_LOCAL_PORT/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
+
 
     escaped_script=$(sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' "$PIPELINE_FILE")
     job_xml=$(mktemp)
@@ -80,17 +81,18 @@ configure_jenkins_pipeline_job() {
 </flow-definition>
 EOF
 
-    if curl -fsS -u "$auth" "$jenkins_url/job/$JENKINS_JOB_NAME/api/json" >/dev/null 2>&1; then
-        curl -fsS -u "$auth" -H "$crumb" -H "Content-Type: application/xml" \
-            --data-binary "@$job_xml" "$jenkins_url/job/$JENKINS_JOB_NAME/config.xml" >/dev/null
+    if curl -fsS -u "$auth" "http://127.0.0.1:$JENKINS_LOCAL_PORT/job/$JENKINS_JOB_NAME/api/json" >/dev/null 2>&1; then
+        curl -fsS -u "$auth" -b /tmp/jenkins-cookies.txt -H "$crumb" -H "Content-Type: application/xml" \
+            --data-binary "@$job_xml" "http://127.0.0.1:$JENKINS_LOCAL_PORT/job/$JENKINS_JOB_NAME/config.xml" >/dev/null
         echo "Updated Jenkins job '$JENKINS_JOB_NAME' from $PIPELINE_FILE."
     else
-        curl -fsS -u "$auth" -H "$crumb" -H "Content-Type: application/xml" \
-            --data-binary "@$job_xml" "$jenkins_url/createItem?name=$JENKINS_JOB_NAME" >/dev/null
+        curl -fsS -u "$auth" -b /tmp/jenkins-cookies.txt -H "$crumb" -H "Content-Type: application/xml" \
+            --data-binary "@$job_xml" "http://127.0.0.1:$JENKINS_LOCAL_PORT/createItem?name=$JENKINS_JOB_NAME" >/dev/null
         echo "Created Jenkins job '$JENKINS_JOB_NAME' from $PIPELINE_FILE."
     fi
 
-    curl -fsS -u "$auth" -H "$crumb" -X POST "$jenkins_url/job/$JENKINS_JOB_NAME/build?delay=0sec" >/dev/null || true
+    curl -fsS -u "$auth" -b /tmp/jenkins-cookies.txt -H "$crumb" -X POST "http://127.0.0.1:$JENKINS_LOCAL_PORT/job/$JENKINS_JOB_NAME/build?delay=0sec" >/dev/null || true
+
     rm -f "$job_xml"
 }
 
@@ -114,32 +116,48 @@ if ! minikube status >/dev/null 2>&1; then
     minikube start --driver=docker
 fi
 
-echo "Building images..."
-docker build -t shaueyakitawat/moneymitra-frontend:latest .
-docker build -t shaueyakitawat/moneymitra-gateway:latest ./backend/gateway
-docker build -t shaueyakitawat/moneymitra-market-service:latest ./backend/market-service
-docker build -t shaueyakitawat/moneymitra-news-service:latest ./backend/news-service
-docker build -t shaueyakitawat/moneymitra-portfolio-service:latest ./backend/portfolio-service
-docker build -t shaueyakitawat/moneymitra-ai-service:latest ./backend/ai-service
+if [ "${SKIP_APPS:-false}" != "true" ]; then
+    echo "Building images..."
+    for svc in frontend gateway market-service news-service portfolio-service ai-service; do
+        img="shaueyakitawat/moneymitra-${svc}:latest"
+        dir="."
+        [ "$svc" != "frontend" ] && dir="./backend/$svc"
+        
+        if ! docker images -q "$img" >/dev/null 2>&1; then
+            echo "Building $img..."
+            docker build -t "$img" "$dir"
+        else
+            echo "Image $img already exists locally, skipping build."
+        fi
+    done
 
-echo "Loading images into Minikube..."
-minikube image load shaueyakitawat/moneymitra-frontend:latest
-minikube image load shaueyakitawat/moneymitra-gateway:latest
-minikube image load shaueyakitawat/moneymitra-market-service:latest
-minikube image load shaueyakitawat/moneymitra-news-service:latest
-minikube image load shaueyakitawat/moneymitra-portfolio-service:latest
-minikube image load shaueyakitawat/moneymitra-ai-service:latest
+    echo "Loading images into Minikube..."
+    for svc in frontend gateway market-service news-service portfolio-service ai-service; do
+        img="shaueyakitawat/moneymitra-${svc}:latest"
+        if ! minikube image ls | grep -q "$img"; then
+            echo "Loading $img into Minikube..."
+            minikube image load "$img"
+        else
+            echo "Image $img already exists in Minikube, skipping load."
+        fi
+    done
 
-echo "Applying Kubernetes manifests..."
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml
-kubectl apply -f k8s/market-service.yaml
-kubectl apply -f k8s/news-service.yaml
-kubectl apply -f k8s/portfolio-service.yaml
-kubectl apply -f k8s/ai-service.yaml
-kubectl apply -f k8s/gateway.yaml
-kubectl apply -f k8s/frontend.yaml
+    echo "Applying Kubernetes manifests..."
+    kubectl apply -f k8s/namespace.yaml
+    kubectl apply -f k8s/configmap.yaml
+    kubectl apply -f k8s/secret.yaml
+    kubectl apply -f k8s/market-service.yaml
+    kubectl apply -f k8s/news-service.yaml
+    kubectl apply -f k8s/portfolio-service.yaml
+    kubectl apply -f k8s/ai-service.yaml
+    kubectl apply -f k8s/gateway.yaml
+    kubectl apply -f k8s/frontend.yaml
+else
+    echo "Skipping microservice deployment (SKIP_APPS=true)."
+    kubectl apply -f k8s/namespace.yaml
+    kubectl apply -f k8s/configmap.yaml
+    kubectl apply -f k8s/secret.yaml
+fi
 
 echo "All resources applied."
 
@@ -172,6 +190,50 @@ trap cleanup EXIT
 echo "Waiting for local bootstrap endpoints..."
 wait_for_http "http://127.0.0.1:$JENKINS_LOCAL_PORT/login" 180
 wait_for_http "http://127.0.0.1:$SONAR_LOCAL_PORT/api/system/status" 180
+
+# 1. SonarQube Token Generation
+echo "Configuring SonarQube token..."
+# Revoke existing if exists
+curl -s -u "$SONAR_ADMIN_USER:$SONAR_ADMIN_PASS" -X POST "http://127.0.0.1:$SONAR_LOCAL_PORT/api/user_tokens/revoke?name=jenkins-token" || true
+# Generate new
+TOKEN_JSON=$(curl -s -u "$SONAR_ADMIN_USER:$SONAR_ADMIN_PASS" -X POST "http://127.0.0.1:$SONAR_LOCAL_PORT/api/user_tokens/generate?name=jenkins-token")
+SONAR_TOKEN=$(echo "$TOKEN_JSON" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$SONAR_TOKEN" ]; then
+    echo "Warning: Failed to generate SonarQube token. Response: $TOKEN_JSON"
+else
+    echo "SonarQube token generated."
+    
+    # 2. Inject token into Jenkins
+    echo "Injecting SonarQube token into Jenkins credentials..."
+    auth="$JENKINS_ADMIN_USER:$JENKINS_ADMIN_PASS"
+    crumb=$(curl -fsS -u "$auth" -c /tmp/jenkins-cookies.txt "http://127.0.0.1:$JENKINS_LOCAL_PORT/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
+    
+    GROOVY_SCRIPT="
+import jenkins.model.*
+import com.cloudbees.plugins.credentials.*
+import com.cloudbees.plugins.credentials.domains.*
+import org.jenkinsci.plugins.plaincredentials.*
+import org.jenkinsci.plugins.plaincredentials.impl.*
+import hudson.util.Secret
+
+def credentialsId = 'sonar-auth-token'
+def secret = Secret.fromString('$SONAR_TOKEN')
+def description = 'SonarQube Auth Token'
+
+def store = Jenkins.instance.getExtensionList('com.cloudbees.plugins.credentials.SystemCredentialsProvider')[0].getStore()
+def existing = store.getCredentials(Domain.global()).find { it.id == credentialsId }
+
+if (existing) {
+    store.updateCredentials(Domain.global(), existing, new StringCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, description, secret))
+} else {
+    store.addCredentials(Domain.global(), new StringCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, description, secret))
+}
+"
+    curl -fsS -u "$auth" -b /tmp/jenkins-cookies.txt -H "$crumb" --data-urlencode "script=$GROOVY_SCRIPT" "http://127.0.0.1:$JENKINS_LOCAL_PORT/scriptText" >/dev/null
+    echo "Jenkins credentials updated."
+fi
+
 
 ensure_sonar_password "http://127.0.0.1:$SONAR_LOCAL_PORT" || true
 resolve_jenkins_credentials
