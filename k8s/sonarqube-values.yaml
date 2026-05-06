@@ -1,0 +1,26 @@
+# Ultra-Lightweight SonarQube for Hackathon
+persistence:
+  enabled: true
+  size: 5Gi
+
+# Reducing memory footprint
+resources:
+  requests:
+    memory: "1.5Gi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+# JVM heap tuning (This is the most important part for stability)
+jvmOpts: "-Xms512m -Xmx1024m -XX:+UseParallelGC"
+
+# Disabling heavy background initializations
+initSysctl:
+  enabled: false
+
+# Correct setting for SonarQube Community Build
+community:
+  enabled: true
+
+monitoringPasscode: "moneymitra123"

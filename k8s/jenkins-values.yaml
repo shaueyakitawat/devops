@@ -1,0 +1,30 @@
+controller:
+  serviceType: NodePort
+  nodePort: 30003
+  admin:
+    username: admin
+    password: admin123
+  installPlugins:
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - sonar
+    - configuration-as-code
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      moneymitra-bootstrap: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      id: "sonar-admin-creds"
+                      scope: GLOBAL
+                      username: "admin"
+                      password: "admin123"
+                      description: "SonarQube admin credentials for bootstrap pipeline"
+persistence:
+  enabled: true
+  size: 8Gi
+  storageClass: standard

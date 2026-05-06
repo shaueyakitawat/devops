@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: moneymitra-config
+  namespace: moneymitra
+data:
+  VITE_API_URL: "http://localhost:30001"

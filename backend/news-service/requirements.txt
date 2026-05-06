@@ -1,0 +1,10 @@
+Flask
+flask-cors
+requests
+beautifulsoup4
+groq
+lxml
+deep-translator
+python-dotenv
+feedparser
+python-dateutil
