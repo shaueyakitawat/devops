@@ -53,25 +53,15 @@ spec:
                 container('sonar-scanner') {
                     script {
 
-                        // MUST match Jenkins SonarQube server name exactly
                         withSonarQubeEnv('SonarQube') {
 
-                            withCredentials([
-                                string(
-                                    credentialsId: 'sonar-auth-token',
-                                    variable: 'SONAR_AUTH_TOKEN'
-                                )
-                            ]) {
-
-                                sh """
-                                sonar-scanner \
-                                  -Dsonar.projectKey=moneymitra \
-                                  -Dsonar.projectName=MoneyMitra \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.token=${SONAR_AUTH_TOKEN}
-                                """
-                            }
+                            sh """
+                            sonar-scanner \
+                              -Dsonar.projectKey=moneymitra \
+                              -Dsonar.projectName=MoneyMitra \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=${SONAR_HOST_URL}
+                            """
                         }
                     }
                 }
@@ -194,7 +184,7 @@ spec:
         }
 
         always {
-            cleanWs()
+            echo 'Pipeline completed.'
         }
     }
 }
