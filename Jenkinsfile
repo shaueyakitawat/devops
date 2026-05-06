@@ -1,14 +1,19 @@
 pipeline {
+
     agent {
         kubernetes {
+
             yaml """
 apiVersion: v1
 kind: Pod
+
 spec:
+
   containers:
+
   - name: docker
     image: docker:24.0.6
-    command: [cat]
+    command: ['cat']
     tty: true
     volumeMounts:
     - name: docker-sock
@@ -16,12 +21,12 @@ spec:
 
   - name: kubectl
     image: alpine/k8s:1.29.2
-    command: [cat]
+    command: ['cat']
     tty: true
 
   - name: sonar-scanner
     image: sonarsource/sonar-scanner-cli:latest
-    command: [cat]
+    command: ['cat']
     tty: true
 
   volumes:
@@ -33,50 +38,60 @@ spec:
     }
 
     environment {
+
         DOCKER_REGISTRY = 'shaueyakitawat'
         DOCKER_CREDS = 'docker-hub-credentials'
 
-        // Internal Kubernetes DNS for SonarQube
-        SONAR_HOST_URL = 'http://sonarqube-sonarqube.default.svc.cluster.local:9000'
+        SONAR_HOST_URL = 'http://sonarqube-sonarqube:9000'
+        PROJECT_KEY = 'moneymitra'
+
+        K8S_NAMESPACE = 'moneymitra'
     }
 
     stages {
 
         stage('Checkout') {
+
             steps {
                 checkout scm
             }
         }
 
         stage('SonarQube Analysis') {
+
             steps {
+
                 container('sonar-scanner') {
-                    script {
 
-                        withSonarQubeEnv('SonarQube') {
+                    withSonarQubeEnv('SonarQube') {
 
-                            sh """
-                            sonar-scanner \
-                              -Dsonar.projectKey=moneymitra \
-                              -Dsonar.projectName=MoneyMitra \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=${SONAR_HOST_URL}
-                            """
-                        }
+                        sh """
+                        sonar-scanner \
+                          -Dsonar.projectKey=${PROJECT_KEY} \
+                          -Dsonar.projectName=MoneyMitra \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=${SONAR_HOST_URL} \
+                          -Dsonar.ws.timeout=60 \
+                          -X
+                        """
                     }
                 }
             }
         }
 
         stage('SonarQube Quality Gate') {
+
             steps {
+
                 timeout(time: 5, unit: 'MINUTES') {
+
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
 
         stage('Build & Push Images') {
+
             steps {
 
                 container('docker') {
@@ -108,13 +123,15 @@ spec:
 
                             services.each { name, path ->
 
-                                echo "Building and pushing ${name}..."
+                                echo "Building ${name}"
 
                                 sh """
                                 docker build \
                                   -t ${DOCKER_REGISTRY}/moneymitra-${name}:latest \
                                   ${path}
                                 """
+
+                                echo "Pushing ${name}"
 
                                 sh """
                                 docker push \
@@ -135,8 +152,6 @@ spec:
 
                     script {
 
-                        def namespace = "moneymitra"
-
                         def services = [
                             'frontend',
                             'gateway',
@@ -152,22 +167,66 @@ spec:
 
                         services.each { name ->
 
-                            echo "Deploying ${name}..."
+                            echo "Deploying ${name}"
 
-                            sh "kubectl apply -f k8s/${name}.yaml"
+                            sh """
+                            kubectl apply \
+                              -f k8s/${name}.yaml
+                            """
 
                             sh """
                             kubectl rollout restart deployment/${name} \
-                            -n ${namespace}
+                              -n ${K8S_NAMESPACE}
                             """
 
                             sh """
                             kubectl rollout status deployment/${name} \
-                            -n ${namespace} \
-                            --timeout=180s
+                              -n ${K8S_NAMESPACE} \
+                              --timeout=180s
                             """
                         }
                     }
+                }
+            }
+        }
+
+        stage('Verify SonarQube Quality Gate') {
+
+            steps {
+
+                container('kubectl') {
+
+                    sh """
+                    echo "Verifying SonarQube Quality Gate"
+
+                    curl -s \
+                    ${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${PROJECT_KEY}
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployed Services') {
+
+            steps {
+
+                container('kubectl') {
+
+                    sh '''
+                    set -e
+
+                    for url in \
+                      http://gateway.moneymitra.svc.cluster.local:8000/health \
+                      http://market-service.moneymitra.svc.cluster.local:8000/health \
+                      http://news-service.moneymitra.svc.cluster.local:8000/health \
+                      http://portfolio-service.moneymitra.svc.cluster.local:8000/health \
+                      http://ai-service.moneymitra.svc.cluster.local:8000/health
+                    do
+                      echo "Checking $url"
+
+                      curl -fsS "$url" >/dev/null
+                    done
+                    '''
                 }
             }
         }
@@ -176,14 +235,17 @@ spec:
     post {
 
         success {
-            echo 'SUCCESS: Code analyzed, images pushed, and services deployed!'
+
+            echo 'SUCCESS: Analysis, build, push, deployment and verification completed.'
         }
 
         failure {
-            echo 'FAILURE: Pipeline failed. Check the logs above.'
+
+            echo 'FAILURE: Pipeline failed. Check console logs.'
         }
 
         always {
+
             echo 'Pipeline completed.'
         }
     }
